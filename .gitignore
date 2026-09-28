@@ -1,0 +1,32 @@
+# Local/private source material and generated indexes
+data/private/
+PDF/
+data/public/
+data/local_sources.json
+data/raw/
+data/processed/
+data/index/
+outputs/
+eval/results/
+eval/private/
+*.sqlite3
+*.db
+
+# Keys and local settings
+.env
+.env.*
+!.env.example
+secrets/
+
+# Python and notebooks
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.pytest_tmp/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# OS and editors
+.DS_Store
+Thumbs.db

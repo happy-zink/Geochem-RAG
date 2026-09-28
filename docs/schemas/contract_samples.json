@@ -1,0 +1,73 @@
+{
+  "contract_version": "0.2.0",
+  "Source": {
+    "source_id": "src_6ee572d18962b49b",
+    "title": "Petrogenesis and Geodynamic Implications of Late Triassic Mogetong Adakitic Pluton...",
+    "authors": ["Jie Gan", "Fuhao Xiong"],
+    "year": 2022,
+    "doi_or_url": "https://doi.org/10.3389/feart.2022.845763",
+    "license": "CC BY 4.0",
+    "license_url": "https://www.frontiersin.org/journals/earth-science/articles/10.3389/feart.2022.845763/full",
+    "sha256": "6ee572d18962b49baeb74161be9565a07abe725f0ae033b43fc0c1eab459016d",
+    "visibility": "public",
+    "download_date": "2026-09-28",
+    "local_path": "data/public/feart_2022_845763.pdf",
+    "third_party_figure_notes": "Figures under CC BY with credit; check captions for third-party maps.",
+    "license_notes": "Publisher page states CC BY 4.0; verified before download.",
+    "title_is_filename": false
+  },
+  "PrivateSource": {
+    "source_id": "src_local_0123456789abcdef",
+    "title": "文件名暂代",
+    "authors": [],
+    "year": null,
+    "doi_or_url": null,
+    "license": null,
+    "license_url": null,
+    "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "visibility": "private",
+    "download_date": null,
+    "local_path": "PDF/文件名暂代.pdf",
+    "third_party_figure_notes": null,
+    "license_notes": null,
+    "title_is_filename": true
+  },
+  "EvidenceChunk": {
+    "chunk_id": "chk_6ee572d18962b49b_p0003_c000",
+    "source_id": "src_6ee572d18962b49b",
+    "pdf_page": 3,
+    "text": "Adakitic rocks are commonly linked to partial melting of thickened lower crust or subducted oceanic crust...",
+    "section": "introduction",
+    "quality": "ok",
+    "chunk_index": 0,
+    "sha256": "6ee572d18962b49baeb74161be9565a07abe725f0ae033b43fc0c1eab459016d",
+    "char_start": 120,
+    "char_end": 640,
+    "extra": {}
+  },
+  "SearchHit": {
+    "chunk_id": "chk_6ee572d18962b49b_p0003_c000",
+    "score": 0.62,
+    "rank": 1,
+    "retrievers": ["dense", "bm25"],
+    "source_id": "src_6ee572d18962b49b",
+    "pdf_page": 3,
+    "dense_score": 0.71,
+    "bm25_score": 4.2
+  },
+  "Answer": {
+    "status": "answered",
+    "text": "The paper attributes adakitic signatures to partial melting of thickened lower crust.",
+    "citations": [
+      {
+        "chunk_id": "chk_6ee572d18962b49b_p0003_c000",
+        "source_id": "src_6ee572d18962b49b",
+        "title": "Petrogenesis and Geodynamic Implications of Late Triassic Mogetong Adakitic Pluton...",
+        "pdf_page": 3
+      }
+    ],
+    "evidence": ["chk_6ee572d18962b49b_p0003_c000"],
+    "question": "How does the paper explain adakitic magmatism?",
+    "meta": {}
+  }
+}
