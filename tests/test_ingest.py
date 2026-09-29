@@ -55,6 +55,18 @@ def test_assess_empty_and_scanned():
     assert quality == "garbled"
 
 
+def test_assess_mismapped_cjk_is_garbled():
+    # Typical CID/ToUnicode failure: Han text extracted into Indic/SE-Asian blocks.
+    broken = "ೆ൭ , ᅵ ҵ ၳ , ֥ ֥[22,26] , ದ [27] Ոၳ ӈ 、ᄯ 、ቔႨ 、หᆘ ഈ , ථջᄝ ն੤ஷሏၛট , ֥ ջྟ 。ݔࢲ࣮ , ൫๭Ֆ Pb༅ 。"
+    quality, note = assess_page_text(broken)
+    assert quality == "garbled"
+    assert note is not None and "encoding" in note
+    # Clean Chinese scientific prose stays ok.
+    clean = "青藏高原 Pb 同位素地球化学研究表明，印度大陆岩石圈地幔具有独特的同位素组成特征。"
+    quality, note = assess_page_text(clean * 3)
+    assert quality == "ok"
+
+
 def test_split_paragraphs_no_blank_line_merge():
     paras = split_paragraphs("a\n\nb\n\n\n\nc")
     assert paras == ["a", "b", "c"]

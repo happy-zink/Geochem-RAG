@@ -103,6 +103,34 @@ def _printable_ratio(text: str) -> float:
     return good / len(text)
 
 
+# CID/ToUnicode failures on CJK PDFs often map Han characters into rare
+# Indic/Southeast-Asian blocks. Those scripts never appear in these papers.
+_MISMAP_SCRIPT_RANGES: tuple[tuple[int, int], ...] = (
+    (0x0900, 0x0DFF),  # Devanagari..Malayalam
+    (0x0E00, 0x0EFF),  # Thai/Lao
+    (0x1000, 0x109F),  # Myanmar
+    (0x1780, 0x18AF),  # Khmer/Mongolian
+    (0xA800, 0xA8DF),
+    (0xABC0, 0xABFF),
+)
+
+
+def _mismapped_script_ratio(text: str) -> float:
+    """Fraction of non-space characters in unlikely script blocks."""
+    counted = 0
+    bad = 0
+    for ch in text:
+        if ch.isspace():
+            continue
+        counted += 1
+        cp = ord(ch)
+        if any(lo <= cp <= hi for lo, hi in _MISMAP_SCRIPT_RANGES):
+            bad += 1
+    if counted == 0:
+        return 0.0
+    return bad / counted
+
+
 def _looks_scanned(text: str, extracted_chars: int) -> bool:
     compact = re.sub(r"\s+", "", text)
     return extracted_chars < DEFAULT_MIN_CHARS and len(compact) < DEFAULT_MIN_CHARS
@@ -115,6 +143,12 @@ def assess_page_text(text: str) -> tuple[str, str | None]:
         return PageQuality.EMPTY.value, "no extractable text"
     if _printable_ratio(stripped) < 0.85:
         return PageQuality.GARBLED.value, "high ratio of non-printable or replacement characters"
+    mismapped = _mismapped_script_ratio(stripped)
+    if mismapped >= 0.08:
+        return (
+            PageQuality.GARBLED.value,
+            "high ratio of mis-mapped CJK glyphs (broken font encoding)",
+        )
     if _looks_scanned(stripped, len(stripped)):
         # Very little text on a page usually means a scanned figure page or image-only page.
         return PageQuality.SCANNED.value, "minimal text; likely scanned or image-only page"

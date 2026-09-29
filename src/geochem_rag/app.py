@@ -94,9 +94,16 @@ def _init_session() -> None:
     st.session_state.setdefault("last_hits", [])
     st.session_state.setdefault("last_error", None)
 
-    store_root = os.environ.get("GEOCHEM_STORE", "data/processed")
+    # Prefer the full local corpus when present; fall back to the historical
+    # public-sample store. GEOCHEM_STORE always wins when set explicitly.
+    default_store = "data/processed"
+    full_store = _REPO / "data" / "private" / "full_corpus"
+    if full_store.is_dir() and (full_store / "chunks.jsonl").is_file():
+        default_store = str(full_store).replace("\\", "/")
+    store_root = os.environ.get("GEOCHEM_STORE", default_store)
     store = LocalStore(store_root)
     st.session_state.store = store
+    st.session_state.store_root = store_root
 
     chunk_count = store.count_chunks()
     st.session_state.chunk_count = chunk_count
@@ -127,12 +134,13 @@ def _init_session() -> None:
     st.session_state.embedder = embedder
     st.session_state.chat = chat
 
-    cache_path = os.environ.get(
-        "GEOCHEM_EMBEDDING_CACHE",
-        "data/index/embeddings.json"
-        if not offline
-        else "data/index/embeddings_offline.json",
-    )
+    if "full_corpus" in str(store_root).replace("\\", "/"):
+        default_cache = "data/index/embeddings_full.json"
+    elif offline:
+        default_cache = "data/index/embeddings_offline.json"
+    else:
+        default_cache = "data/index/embeddings.json"
+    cache_path = os.environ.get("GEOCHEM_EMBEDDING_CACHE", default_cache)
     try:
         retriever = Retriever.from_store(
             store, embedder, cache_path=cache_path  # type: ignore[arg-type]
@@ -181,6 +189,11 @@ def _render_sidebar() -> dict[str, Any]:
             index=0,
         )
         top_k = st.slider("Top-k evidence", min_value=1, max_value=10, value=5)
+        allow_extended = st.checkbox(
+            "扩展解释（一般背景知识，与论文证据分开展示）",
+            value=False,
+            help="开启后，模型可在「扩展解释」区补充教科书式背景；该部分不会作为论文引用，也不会替代证据结论。",
+        )
 
         st.divider()
         st.header("Sources")
@@ -216,11 +229,12 @@ def _render_sidebar() -> dict[str, Any]:
             "**Where your data goes:**\n\n"
             "- Local PDFs and extracted evidence stay on this machine.\n"
             "- `PDF/` and `data/private/` are excluded from Git.\n"
-            "- When you ask a question, the **retrieved evidence fragments** "
-            "and your question are sent to the configured online API "
-            "(SiliconFlow / DeepSeek) to generate an answer.\n"
-            "- Private corpus text is transmitted only as the specific "
-            "evidence chunks matched by retrieval, never the full document.\n"
+            "- **Building the embedding index** sends private evidence-chunk "
+            "texts to **SiliconFlow** (embedding API).\n"
+            "- **Asking a question** sends your **question + retrieved evidence "
+            "fragments** to **DeepSeek** (chat API).\n"
+            "- PDF files are not uploaded. Indexing sends extracted text "
+            "chunk by chunk; answering sends only the retrieved chunks.\n"
             "- No API key is shown or logged in this interface."
         )
         if st.session_state.offline_mode:
@@ -229,7 +243,11 @@ def _render_sidebar() -> dict[str, Any]:
                 "sent to any external API. Answers are placeholder text."
             )
 
-    return {"retrieval_mode": retrieval_mode, "top_k": top_k}
+    return {
+        "retrieval_mode": retrieval_mode,
+        "top_k": top_k,
+        "allow_extended": allow_extended,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -300,14 +318,30 @@ def _render_citation(
 def _render_answer(answer, store: LocalStore, evidence_items: list[EvidenceItem]) -> None:
     """Render the full answer block with citations."""
     banner = _status_banner(answer.status)
-    banner.markdown(f"**{_status_label(answer.status)}**")
+    banner(f"**{_status_label(answer.status)}**")
 
     if answer.status == AnswerStatus.ANSWERED.value:
         st.markdown(answer.text)
         st.divider()
-        st.markdown("**Citations:**")
+        st.markdown("**Citations (paper evidence):**")
         for idx, citation in enumerate(answer.citations):
             _render_citation(citation, store, evidence_items, idx)
+
+        unsupported = answer.meta.get("unsupported_aspects") or []
+        if unsupported:
+            st.warning(
+                "**尚无论文证据支持的部分**\n\n"
+                + "\n".join(f"- {item}" for item in unsupported)
+            )
+
+        extended = answer.meta.get("extended_explanation")
+        if extended:
+            with st.expander("扩展解释（一般背景知识 · 非论文证据）", expanded=False):
+                st.markdown(extended)
+                st.caption(
+                    "以上为模型补充的通用背景，**不是**本次检索论文中的结论，"
+                    "不得当作引用来源。"
+                )
 
     elif answer.status == AnswerStatus.INSUFFICIENT_EVIDENCE.value:
         st.markdown(answer.text)
@@ -387,9 +421,16 @@ def main() -> None:
 
         mode = config["retrieval_mode"]
         top_k = config["top_k"]
+        allow_extended = bool(config.get("allow_extended"))
 
         trace = retriever.retrieve_with_trace(question, mode=mode, top_k=top_k)
-        answer = answerer.answer(question, trace.hits)
+        # Pass the UI top-k so the answerer does not silently cut to 5.
+        answer = answerer.answer(
+            question,
+            trace.hits,
+            top_k=top_k,
+            allow_extended=allow_extended,
+        )
 
     # Build evidence items for display.
     evidence_items = build_evidence(trace.hits, store, top_k=top_k)

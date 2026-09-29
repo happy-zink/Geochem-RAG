@@ -9,6 +9,7 @@ data/index/
 outputs/
 eval/results/
 eval/private/
+eval/results_offline/
 *.sqlite3
 *.db
 
@@ -25,6 +26,11 @@ __pycache__/
 .pytest_cache/
 .pytest_tmp/
 .ruff_cache/
+.arts/
+.playwright-cli/
+.merkle-snapshot.json
+_a.log
+_t.log
 .ipynb_checkpoints/
 
 # OS and editors

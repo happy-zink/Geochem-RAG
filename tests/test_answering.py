@@ -119,6 +119,7 @@ def test_fabricated_citation_is_rejected(store):
     assert answer.status == AnswerStatus.INSUFFICIENT_EVIDENCE.value
     assert answer.citations == []
     assert "chk_fabricated" in answer.meta["rejected_citation_ids"]
+    assert "捏造" not in answer.text
 
 
 def test_answered_without_citation_downgrades(store):
@@ -126,13 +127,21 @@ def test_answered_without_citation_downgrades(store):
     answer = EvidenceAnswerer(store, chat).answer("q", [make_hit("chk_p0003_c000")])
     assert answer.status == AnswerStatus.INSUFFICIENT_EVIDENCE.value
     assert answer.citations == []
+    assert "没有引用" not in answer.text
+
+
+def test_refusal_does_not_expose_uncited_model_claims(store):
+    chat = FakeChat(reply='{"status": "insufficient_evidence", "answer": "未经证实的具体地学结论。", "citations": []}')
+    answer = EvidenceAnswerer(store, chat).answer("q", [make_hit("chk_p0003_c000")])
+    assert answer.status == AnswerStatus.INSUFFICIENT_EVIDENCE.value
+    assert "未经证实" not in answer.text
 
 
 def test_model_refusal_is_insufficient(store):
     chat = FakeChat(reply='{"status": "insufficient_evidence", "answer": "证据不足。", "citations": []}')
     answer = EvidenceAnswerer(store, chat).answer("q", [make_hit("chk_p0003_c000")])
     assert answer.status == AnswerStatus.INSUFFICIENT_EVIDENCE.value
-    assert answer.text == "证据不足。"
+    assert answer.text.startswith("证据不足：")
 
 
 def test_provider_error_becomes_error_status(store):

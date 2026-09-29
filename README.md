@@ -16,6 +16,7 @@ Evidence-grounded literature Q&A for rock geochemistry. Retrieves evidence from 
 - 固定题集评估脚本与指标计算（`evaluation.py`）
 - Streamlit 界面，展示回答状态、引用、证据片段与隐私说明（`app.py`）
 - 离线演示模式（无需 API 密钥）
+- 本地 `PDF/` 全量续跑导入与独立索引脚本（私有语料留在本机）
 
 **尚未完成：**
 
@@ -40,7 +41,7 @@ Evidence-grounded literature Q&A for rock geochemistry. Retrieves evidence from 
 
 ```powershell
 # 克隆或下载项目后，进入项目目录
-cd D:\RAG
+cd 路径\到\GeoChem-RAG
 
 # 创建虚拟环境（推荐）
 python -m venv .venv
@@ -123,6 +124,15 @@ export PYTHONIOENCODING=utf-8
 
 默认按私有文献导入；标题暂用文件名，未知作者、年份、DOI、许可证保持空值。
 
+**导入整个 `PDF/`：** 在项目根目录运行下列命令。它按 SHA-256 去重，续跑时跳过已入库内容；报告写入 `data/private/full_corpus/full_import_report.json`。
+
+```powershell
+.\.venv\Scripts\python.exe scripts\import_all_pdfs.py
+.\.venv\Scripts\python.exe scripts\import_all_pdfs.py --report-only
+```
+
+导入结果默认在 `data/private/full_corpus/`。原始 PDF、抽取文本及报告均保持私有，不提交到 GitHub。部分扫描页和乱码页只能标记质量，当前没有 OCR。
+
 ### 构建嵌入索引
 
 如果你配置了 API 密钥，需要构建嵌入索引以启用 dense 检索：
@@ -147,6 +157,12 @@ set -a && source .env && set +a
 
 嵌入向量会缓存在 `data/index/embeddings.json`（已 gitignore）。相同文本不会重复嵌入。
 
+若使用上面的全量库，改运行 `scripts/build_full_index.py`；脚本读取 `.env`，向 SiliconFlow 逐块发送抽取文本，并将向量缓存在 `data/index/embeddings_full.json`。中断后可续跑；未完成时以非零退出码报告，不能当作索引完成。
+
+```powershell
+.\.venv\Scripts\python.exe scripts\build_full_index.py
+```
+
 ### 启动 Streamlit 界面
 
 **Windows PowerShell：**
@@ -169,6 +185,8 @@ set -a && source .env && set +a
 - 侧边栏：检索配置、来源列表、隐私说明
 
 如果没有 API 密钥，界面会自动切换到离线演示模式，侧边栏会显示警告。
+
+使用 `.env` 中的两套在线密钥启动全量库，可运行 `python scripts/run_streamlit_online.py`（Windows 虚拟环境下用 `.\.venv\Scripts\python.exe` 代替 `python`）。存在全量库时，界面默认选用它及对应的向量缓存；`GEOCHEM_STORE` 和 `GEOCHEM_EMBEDDING_CACHE` 可覆盖默认路径。
 
 ### 运行固定演示
 
@@ -277,6 +295,9 @@ GeoChem-RAG/
 │
 ├── scripts/
 │   ├── build_index.py           # 构建嵌入索引
+│   ├── import_all_pdfs.py       # 全量私有 PDF 可续跑导入
+│   ├── build_full_index.py      # 全量库可续跑嵌入索引
+│   ├── run_streamlit_online.py  # 从 .env 启动在线界面
 │   ├── run_evaluation.py        # 运行评估
 │   ├── run_demo.py              # 固定三题演示
 │   ├── run_online_e2e.py        # 单题在线端到端测试
@@ -299,7 +320,7 @@ GeoChem-RAG/
 ## 隐私与数据流 / Privacy & Data Flow
 
 - **本地数据：** PDF 原文、抽取文本、嵌入向量都保存在本地。`PDF/`、`data/private/`、`data/processed/`、`data/index/` 均被 `.gitignore` 忽略。
-- **在线 API：** 当你提问时，**检索到的证据片段**和你的问题会被发送到配置的在线 API（SiliconFlow 用于嵌入，DeepSeek 或 SiliconFlow 用于对话生成）。私有语料仅以检索匹配的证据块形式传输，不会上传完整文档。
+- **在线 API：** 建索引时，抽取出的文本按证据块发送到 SiliconFlow 嵌入 API；问答时，问题与检索命中的证据块发送到 DeepSeek 对话 API（或你配置的对话 provider）。不上传原始 PDF 文件。
 - **API 密钥：** 只从环境变量读取，不显示在界面中，不记录在日志中。
 - **公开仓库：** 不包含私有 PDF、API 密钥、嵌入索引或私有检索日志。
 
@@ -313,6 +334,7 @@ Streamlit 界面的侧边栏有详细的隐私说明。
 - [演示指南](docs/DEMO.md)
 - [Source 契约迁移说明](docs/CONTRACT_MIGRATION_0.2.md)
 - [Agent 任务书](docs/agents/)
+- [全量语料扩容交付报告（公开版）](docs/FULL_CORPUS_EXPANSION_REPORT.md)
 
 ## 已知限制 / Known Limitations
 
@@ -320,7 +342,7 @@ Streamlit 界面的侧边栏有详细的隐私说明。
 2. **中文分词：** 无 jieba；对 CJK 取字符单字 + 二元组，对 Latin 取词/数字。跨语言主要靠 dense（bge-m3）承担。
 3. **人工指标：** 引用正确率与支持性需人工标注，当前 PENDING。
 4. **真实评估：** 因网络限制，真实模型下的全链路评估未完成。
-5. **语料：** 当前 4 篇 Frontiers 公开样本（CC BY 4.0）用于打通流程；正式语料由用户放入 `PDF/` 并经许可审查后重新导入。
+5. **语料：** 历史 4 篇 Frontiers 样本用于原型验证；本机可导入 `PDF/` 全量私有语料。GitHub 克隆者没有这些 PDF 和索引，不能直接复现本机的全量结果。公开演示语料仍需用户明确确认可再分发。
 
 ## 测试 / Testing
 
@@ -330,7 +352,7 @@ Streamlit 界面的侧边栏有详细的隐私说明。
 .venv/bin/python -m pytest tests -q
 ```
 
-当前 67 项测试全部通过，覆盖：
+运行上述命令验证当前测试，覆盖：
 
 - `domain.py`：数据契约校验
 - `ingest.py`：PDF 抽取与分块

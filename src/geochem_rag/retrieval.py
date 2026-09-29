@@ -107,6 +107,28 @@ _GEO_EXPANSIONS: dict[str, tuple[str, ...]] = {
     "lu-hf": ("lu-hf", "lutetium hafnium"),
     "εhf": ("epsilon hf", "ehf"),
     "mg#": ("mg number", "magnesium number"),
+    "sr/y": ("sry", "sr y ratio"),
+    # Reverse / corpus-level bridges (Chinese question ↔ English paper and back).
+    "地壳厚度": ("crustal thickness", "moho depth", "crustal thicknesses"),
+    "青藏": ("tibet", "tibetan", "tibetan plateau", "qinghai-tibet"),
+    "高原": ("plateau", "tibetan plateau"),
+    "冈底斯": ("gangdese",),
+    "喜马拉雅": ("himalaya", "himalayan"),
+    "氧逸度": ("oxygen fugacity", "redox", "fO2"),
+    "氧化还原": ("redox",),
+    "金红石": ("rutile",),
+    "地壳生长": ("crustal growth", "continental growth"),
+    "地壳增厚": ("crustal thickening", "crustal thickening"),
+    "俯冲带": ("subduction zone", "subduction"),
+    "岛弧": ("island arc", "arc"),
+    "大陆地壳": ("continental crust",),
+    "亏损地幔": ("depleted mantle",),
+    "岩石圈": ("lithosphere",),
+    "adakitic": ("埃达克质", "adakite"),
+    "crustal thickness": ("地壳厚度",),
+    "redox": ("氧化还原", "氧逸度", "oxygen fugacity"),
+    "tibet": ("青藏", "tibetan plateau"),
+    "gangdese": ("冈底斯",),
 }
 
 
